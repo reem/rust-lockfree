@@ -13,5 +13,6 @@ extern crate alloc;
 pub mod raw {
     pub mod ringbuf;
     pub mod buffer;
+    pub mod alloc;
 }
 
