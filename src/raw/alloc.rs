@@ -2,12 +2,19 @@ use alloc::heap;
 use std::mem;
 use std::num::Int;
 
+/// "Allocate" a special allocation of zero size.
 #[inline]
 pub unsafe fn empty<T>() -> *mut T { 1u as *mut T }
 
-/// UB if:
-///   - capacity == 0
-///   - size_of::<T> == 0
+/// Allocate space for `capacity` `T`s
+///
+/// ## Panics
+///
+/// Will call `alloc::oom` if allocation fails.
+///
+/// ## Invariants
+///   - `capacity` is non-zero.
+///   - `T` is not a zero-sized-type.
 #[inline]
 pub unsafe fn allocate<T>(capacity: uint) -> *mut T {
     let size_of = mem::size_of::<T>();
@@ -23,11 +30,19 @@ pub unsafe fn allocate<T>(capacity: uint) -> *mut T {
     ptr as *mut T
 }
 
-/// UB if:
-///   - new_capacity == 0
-///   - size_of::<T> == 0
-///   - old is not allocated by the heap allocator
-///   - old_capacity is not the capacity of old
+
+/// Reallocate `old` to a new size, so it can hold `new_capacity` `T`s
+///
+/// ## Panics
+///
+/// Will call `alloc::oom` if reallocation fails.
+///
+/// ## Invariants
+///   - `old_capacity` is non-zero.
+///   - `new_capacity` is non-zero.
+///   - `T` is not a zero-sized-type.
+///   - `old` is the appropriate size for `old_capacity` `T`s size and was allocated by
+///     the heap allocator.
 #[inline]
 pub unsafe fn reallocate<T>(old: *mut T, old_capacity: uint, new_capacity: uint) -> *mut T {
     let size_of = mem::size_of::<T>();
@@ -44,11 +59,13 @@ pub unsafe fn reallocate<T>(old: *mut T, old_capacity: uint, new_capacity: uint)
     ptr as *mut T
 }
 
-/// UB if:
-///   - capacity == 0
-///   - size_of::<T> == 0
-///   - old is not allocated by the heap allocator
-///   - capacity is not the capacity of old
+/// Deallocates `old`
+///
+/// ## Invariants
+///   - `capacity` is non-zero.
+///   - `T` is not a zero-sized-type.
+///   - `old` is the appropriate size for `capacity` `T`s size and was allocated by
+///     the heap allocator.
 #[inline]
 pub unsafe fn deallocate<T>(old: *mut T, capacity: uint) {
     let size_of = mem::size_of::<T>();
@@ -61,8 +78,11 @@ pub unsafe fn deallocate<T>(old: *mut T, capacity: uint) {
     heap::deallocate(old as *mut u8, size, alignment)
 }
 
-/// Capacity should not == 0 or this will give not-usable results
-/// same for size_of::<T>
+/// Gets the appropriate size for an allocation of `capacity` `T`s, checking for overflow.
+///
+/// ## Invariants
+///   - `capacity` is non-zero.
+///   - `T` is not a zero-sized-type.
 #[inline]
 fn allocation_size<T>(capacity: uint) -> uint {
     debug_assert!(capacity != 0);
